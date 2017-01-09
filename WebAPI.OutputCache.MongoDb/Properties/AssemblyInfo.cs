@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("AspNetWebApi-OutputCache-MongoDb")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Extension for Strathweb (@filipw) CacheOutput for WebApi (And WebApi2) that supports MongoDb. Uses MongoDB.Driver 2.4.1")]
 [assembly: AssemblyProduct("AspNetWebApi-OutputCache-MongoDb")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: InternalsVisibleTo("WebAPI.OutputCache.MongoDb.Tests")]
