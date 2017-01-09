@@ -77,7 +77,7 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Utilities
 
             var result = _calculateKey.Calculate(key, "someprefix");
 
-            Assert.That(result, Is.StringStarting("someprefix"));
+            Assert.That(result, Does.StartWith("someprefix"));
         }
     }
 }

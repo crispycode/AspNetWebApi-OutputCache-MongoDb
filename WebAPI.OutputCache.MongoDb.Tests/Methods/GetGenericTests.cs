@@ -1,6 +1,6 @@
 ﻿using System;
 using MongoDB.Bson;
-using MongoDB.Driver.Builders;
+using MongoDB.Driver;
 using NUnit.Framework;
 
 namespace WebAPI.OutputCache.MongoDb.Tests.Methods
@@ -15,13 +15,13 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
         {
             _user = new UserFixture { Name = "John", DateOfBirth = new DateTime(1980, 01, 23) };
 
-            MongoCollection.Insert(new CachedItem(_user.Id.ToString(), _user, DateTime.Now.AddHours(1)));
+            MongoCollection.InsertOne(new CachedItem(_user.Id.ToString(), _user, DateTime.UtcNow.AddHours(1)));
         }
 
         [TearDown]
         public void TearDown()
         {
-            MongoCollection.RemoveAll();
+            MongoDatabase.DropCollection("cache");
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
         public void does_not_return_item_that_has_expired()
         {
             //add an item that expires 1 hour ago
-            MongoCollection.Insert(new CachedItem("expired-item", _user, DateTime.Now.AddHours(-1)));
+            MongoCollection.InsertOne(new CachedItem("expired-item", _user, DateTime.UtcNow.AddHours(-1)));
 
             var result = MongoDbApiOutputCache.Get<UserFixture>("expired-item");
 
@@ -60,10 +60,11 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
         public void item_is_deleted_from_database_if_expired()
         {
             //add an item that expires 1 hour ago
-            MongoCollection.Insert(new CachedItem("expired-item", _user, DateTime.Now.AddHours(-1)));
+            MongoCollection.InsertOne(new CachedItem("expired-item", _user, DateTime.UtcNow.AddHours(-1)));
 
             var result = MongoDbApiOutputCache.Get<UserFixture>("expired-item");
-            var resultFromMongo = MongoCollection.FindOneAs<CachedItem>(Query.EQ("_id", new BsonString("expired-item")));
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString("expired-item"));
+            var resultFromMongo = MongoCollection.Find(filter).FirstOrDefault();
 
             Assert.That(result, Is.Null);
             Assert.That(resultFromMongo, Is.Null);

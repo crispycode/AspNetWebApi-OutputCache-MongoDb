@@ -4,19 +4,18 @@ namespace WebAPI.OutputCache.MongoDb.Tests
 {
     public class MongoDbApiOutputCacheTestsBase
     {
-        protected MongoDatabase MongoDatabase;
-        protected MongoCollection MongoCollection;
+        protected IMongoDatabase MongoDatabase;
+        protected IMongoCollection<CachedItem> MongoCollection;
 
         protected MongoDbApiOutputCache MongoDbApiOutputCache;
 
         public MongoDbApiOutputCacheTestsBase()
         {
             var mongoUrl = new MongoUrl("mongodb://localhost/MongoDbApiOutputCache_Test");
-            var client = new MongoClient(mongoUrl);
-            var server = client.GetServer();
+            var client = new MongoClient(mongoUrl);            
 
-            MongoDatabase = server.GetDatabase(mongoUrl.DatabaseName);
-            MongoCollection = MongoDatabase.GetCollection("cache");
+            MongoDatabase = client.GetDatabase(mongoUrl.DatabaseName);
+            MongoCollection = MongoDatabase.GetCollection<CachedItem>("cache");
 
             MongoDbApiOutputCache = new MongoDbApiOutputCache(MongoDatabase);
         }

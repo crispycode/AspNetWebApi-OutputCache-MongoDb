@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using MongoDB.Driver.Linq;
 using WebApi.OutputCache.Core.Cache;
 using JsonSerializer = ServiceStack.Text.JsonSerializer;
 
@@ -11,45 +11,36 @@ namespace WebAPI.OutputCache.MongoDb
 {
     public class MongoDbApiOutputCache : IApiOutputCache
     {
-        internal readonly MongoCollection MongoCollection;
+        internal readonly IMongoCollection<CachedItem> MongoCollection;
 
-        public MongoDbApiOutputCache(MongoDatabase mongoDatabase)
-            : this(mongoDatabase, "cache")
-        { }
-
-        static MongoDbApiOutputCache()
+        public IEnumerable<string> AllKeys
         {
-            if (!BsonClassMap.IsClassMapRegistered(typeof(CachedItem)))
-                BsonClassMap.RegisterClassMap<CachedItem>(cm =>
-                {
-                    cm.MapIdField(x => x.Key);
-                    cm.MapProperty(x => x.Value).SetElementName("value");
-                    cm.MapProperty(x => x.ExpireAt).SetElementName("expireAt");
-                    cm.MapField(x => x.ValueType).SetElementName("valueType");
-
-                    cm.SetIgnoreExtraElements(true);
-                });
+            get { return MongoCollection.AsQueryable().Select(x => x.Key); }
         }
 
-        public MongoDbApiOutputCache(MongoDatabase mongoDatabase, string cacheCollectionName)
-        {
-            MongoCollection = mongoDatabase.GetCollection(cacheCollectionName);
+        public MongoDbApiOutputCache(IMongoDatabase mongoDatabase)
+            : this(mongoDatabase, "cache")
+        {            
+        }        
 
-            MongoCollection.EnsureIndex(
-                IndexKeys.Ascending("expireAt"),
-                IndexOptions.SetTimeToLive(TimeSpan.FromMilliseconds(0))
-                );
+        public MongoDbApiOutputCache(IMongoDatabase mongoDatabase, string cacheCollectionName)
+        {                        
+            MongoCollection = mongoDatabase.GetCollection<CachedItem>(cacheCollectionName);
+
+            MongoCollection.Indexes.CreateOne(Builders<CachedItem>.IndexKeys.Ascending("expireAt"), new CreateIndexOptions { ExpireAfter = TimeSpan.FromMilliseconds(0) });            
         }
 
         public void RemoveStartsWith(string key)
         {
-            MongoCollection.Remove(Query.Matches("_id", new BsonRegularExpression("^" + key)));
+            var filter = Builders<CachedItem>.Filter.Regex("_id", new BsonRegularExpression("^" + key));
+            MongoCollection.DeleteMany(filter);
         }
 
         public T Get<T>(string key) where T : class
         {
-            var item = MongoCollection
-                .FindOneAs<CachedItem>(Query.EQ("_id", new BsonString(key)));
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString(key));
+
+            var item = MongoCollection.Find(filter).FirstOrDefault();
 
             if (item == null)
                 return null;
@@ -61,23 +52,29 @@ namespace WebAPI.OutputCache.MongoDb
 
         public object Get(string key)
         {
-            var item = MongoCollection
-                .FindOneAs<CachedItem>(Query.EQ("_id", new BsonString(key)));
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString(key));
+            var item = MongoCollection.Find(filter).FirstOrDefault();
 
+            if (item == null)
+            {
+                return null;
+            }
+            
             var type = Type.GetType(item.ValueType);
             return JsonSerializer.DeserializeFromString(item.Value, type);
         }
 
         public void Remove(string key)
         {
-            MongoCollection.Remove(Query.EQ("_id", new BsonString(key)));
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString(key));
+            MongoCollection.DeleteOne(filter);
         }
 
         public bool Contains(string key)
         {
-            return MongoCollection
-                .FindAs<CachedItem>(Query.EQ("_id", new BsonString(key)))
-                .Count() == 1;
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString(key));
+
+            return MongoCollection.Find(filter).Count() == 1;
         }
 
         public void Add(string key, object o, DateTimeOffset expiration, string dependsOnKey = null)
@@ -88,16 +85,17 @@ namespace WebAPI.OutputCache.MongoDb
 
             var cachedItem = new CachedItem(key, o, expiration.DateTime);
 
-            MongoCollection.Save(cachedItem);
+            var filter = Builders<CachedItem>.Filter.Eq("_id", new BsonString(key));
+            MongoCollection.ReplaceOne(filter, cachedItem, new UpdateOptions { IsUpsert = true });
         }
 
         private bool CheckItemExpired(CachedItem item)
         {
-            if (item.ExpireAt >= DateTime.Now)
+            if (item.ExpireAt >= DateTime.UtcNow)
                 return false;
 
             //does the work of TTL collections early - TTL is only "fired" once a minute or so
-            MongoCollection.Remove(Query.EQ("_id", item.Key));
+            Remove(item.Key);
 
             return true;
         }

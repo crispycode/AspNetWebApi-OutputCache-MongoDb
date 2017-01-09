@@ -1,4 +1,5 @@
 ﻿using System;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace WebAPI.OutputCache.MongoDb.Tests.Methods
 {
@@ -8,7 +9,7 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
         {
             Id = Guid.NewGuid();
         }
-
+        
         public Guid Id { get; set; }
         public string Name { get; set; }
         public DateTime DateOfBirth { get; set; }

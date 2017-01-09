@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using NUnit.Framework;
+using MongoDB.Driver;
 
 namespace WebAPI.OutputCache.MongoDb.Tests.Methods
 {
@@ -14,30 +15,30 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
             var item2 = new CachedItem("apples-2", "Pink Lady", DateTime.Now.AddHours(1));
             var item3 = new CachedItem("dogs-1", "Jack Russell", DateTime.Now.AddHours(1));
 
-            MongoCollection.Insert(item1);
-            MongoCollection.Insert(item2);
-            MongoCollection.Insert(item3);
+            MongoCollection.InsertOne(item1);
+            MongoCollection.InsertOne(item2);
+            MongoCollection.InsertOne(item3);
         }
 
         [TearDown]
         public void TearDown()
         {
-            MongoCollection.RemoveAll();
+            MongoDatabase.DropCollection("cache");
         }
 
         [Test]
         public void removes_keys_starting_with_given_string()
-        {
-            Assert.That(MongoCollection.Count(), Is.EqualTo(3));
+        {            
+            Assert.That(MongoCollection.AsQueryable().Count(), Is.EqualTo(3));
 
             MongoDbApiOutputCache.RemoveStartsWith("apples");
 
-            Assert.That(MongoCollection.Count(), Is.EqualTo(1));
+            var allItems = MongoCollection.AsQueryable();
+            
+            Assert.That(MongoCollection.AsQueryable().Count(), Is.EqualTo(1));            
 
-            var result = MongoCollection.FindAllAs<CachedItem>();
-
-            Assert.That(result.Any(x => x.Key.Equals("apples-1")), Is.False);
-            Assert.That(result.Any(x => x.Key.Equals("apples-2")), Is.False);
+            Assert.That(allItems.Any(x => x.Key.Equals("apples-1")), Is.False);
+            Assert.That(allItems.Any(x => x.Key.Equals("apples-2")), Is.False);
         }
     }
 }

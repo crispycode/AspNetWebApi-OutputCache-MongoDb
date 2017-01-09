@@ -13,13 +13,13 @@ namespace WebAPI.OutputCache.MongoDb.Tests.Methods
         {
             _user = new UserFixture { Name = "John", DateOfBirth = new DateTime(1980, 01, 23) };
 
-            MongoCollection.Insert(new CachedItem(_user.Id.ToString(), _user, DateTime.Now.AddSeconds(60)));
+            MongoCollection.InsertOne(new CachedItem(_user.Id.ToString(), _user, DateTime.UtcNow.AddSeconds(60)));
         }
 
         [TearDown]
         public void TearDown()
         {
-            MongoCollection.RemoveAll();
+            MongoDatabase.DropCollection("cache");
         }
 
         [Test]
