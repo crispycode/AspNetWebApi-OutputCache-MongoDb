@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>CC.WebAPI.OutputCache.MongoDB</id>
+    <version>1.1.0</version>
+    <title>CC.WebAPI.OutputCache.MongoDB</title>
+    <authors>Alex Brown, Laszlo Tordai</authors>        
+    <projectUrl>https://github.com/crispycode/AspNetWebApi-OutputCache-MongoDb-Provider</projectUrl>    
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Extension for Strathweb (@filipw) CacheOutput for WebApi (And WebApi2) that supports MongoDb. Uses MongoDB.Driver 2.4.1</description>
+    <releaseNotes>Update to MongoDB.Driver 2.4.1</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>aspnet webapi aspnetwebapi mongodb</tags>
+  </metadata>
+</package>
